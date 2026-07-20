@@ -19,4 +19,4 @@ PROCESSED_DATA_DIR = DATA_DIR / "processed"
 # Log Directory
 # =====================================================
 
-LOG_DIR = PROJECT_ROOT / "logs"s
+LOG_DIR = PROJECT_ROOT / "logs"
