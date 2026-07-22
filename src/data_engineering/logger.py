@@ -24,3 +24,4 @@ console_handler.setFormatter(formatter)
 if not logger.handlers:
     logger.addHandler(file_handler)
     logger.addHandler(console_handler)
+logger.propagate = False
