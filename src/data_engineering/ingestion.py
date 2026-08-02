@@ -104,7 +104,7 @@ def read_folder(folder_path: Path) -> pd.DataFrame:
     if not folder_path.exists():
         logger.error(f"Folder not found: {folder_path}")
         raise FileNotFoundError(f"Folder not found: {folder_path}")
-
+                
     csv_files = sorted(folder_path.glob("*.csv"))
 
     if not csv_files:
