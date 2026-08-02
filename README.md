@@ -10,7 +10,7 @@ AI-Powered Smart Traffic Management System using Machine Learning and Computer V
 - OpenCV
 - YOLO
 - ByteTrack
-- Scikit-learn
+- Scikit-learngit
 - Streamlit
 
 ## Dataset
