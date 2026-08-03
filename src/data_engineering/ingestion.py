@@ -1,19 +1,24 @@
-# ingestion.py
+"""
 
-# Purpose:
-# Centralized data ingestion module for reading CSV files.
-# All project modules should use this file instead of calling
-# pandas.read_csv() directly.
+Purpose:
+Centralized data ingestion module.
 
+Responsibilities:
+1. Read a single CSV file.
+2. Read multiple CSV files.
+3. Read every CSV inside a folder.
 
-import pandas as pd
+NOTE:
+This module DOES NOT merge datasets.
+Merging is handled separately in data_merger.py.
+"""
+
 from pathlib import Path
-
+import pandas as pd
 from src.data_engineering.logger import logger
 
 
-
-
+# Read a single CSV file.
 def read_csv_file(file_path: Path) -> pd.DataFrame:
     """
     Read a CSV file and return it as a pandas DataFrame.
@@ -21,7 +26,7 @@ def read_csv_file(file_path: Path) -> pd.DataFrame:
     Parameters
     ----------
     file_path : Path
-        Absolute or relative path of the CSV file.
+        Path to the CSV file.
 
     Returns
     -------
@@ -35,56 +40,84 @@ def read_csv_file(file_path: Path) -> pd.DataFrame:
 
     ValueError
         If the file is not a CSV or is empty.
-
-    Exception
-        Any unexpected exception raised while reading the file.
     """
-    
+
     try:
 
-        # Ensure the file exists before attempting to read it.
+        # Check whether the file exists.
         if not file_path.exists():
+
             logger.error(f"File not found: {file_path}")
-            raise FileNotFoundError(f"File not found: {file_path}")
 
-        # Accept only CSV files.
-        if file_path.suffix.lower() != ".csv":
-            logger.error(f"Unsupported file type: {file_path}")
-
-            raise ValueError(
-                f"Expected a CSV file, received '{file_path.suffix}' instead."
+            raise FileNotFoundError(
+                f"File not found: {file_path}"
             )
 
-        # Reject empty files early.
+        # Allow only CSV files.
+        if file_path.suffix.lower() != ".csv":
+
+            logger.error(
+                f"Unsupported file type: {file_path}"
+            )
+
+            raise ValueError(
+                f"Expected '.csv' file, "
+                f"received '{file_path.suffix}'."
+            )
+
+        # Reject empty files.
         if file_path.stat().st_size == 0:
-            logger.error(f"CSV file is empty: {file_path}")
+
+            logger.error(
+                f"CSV file is empty: {file_path}"
+            )
 
             raise ValueError(
                 f"CSV file is empty: {file_path}"
             )
 
-        logger.info(f"Reading CSV file: {file_path}")
+        logger.info(
+            f"Reading CSV file: {file_path.name}"
+        )
 
         df = pd.read_csv(file_path)
 
         logger.info(
-            f"Successfully loaded '{file_path.name}' "
-            f"with {len(df):,} rows and {len(df.columns)} columns."
+            f"Successfully loaded "
+            f"{file_path.name} "
+            f"({len(df):,} rows, "
+            f"{len(df.columns)} columns)."
         )
 
         return df
 
     except Exception:
-        logger.exception(f"Failed to read CSV file: {file_path}")
+
+        logger.exception(
+            f"Failed to read CSV file: {file_path}"
+        )
+
         raise
 
-# Read multiple CSV files.
 
-def read_multiple_csv_files(
+# Read multiple CSV files.
+def read_csv_files(
     file_paths: list[Path],
 ) -> list[pd.DataFrame]:
+    """
+    Read multiple CSV files.
 
-    # Store each successfully loaded DataFrame.
+    Parameters
+    ----------
+    file_paths : list[Path]
+        List of CSV file paths.
+
+    Returns
+    -------
+    list[pd.DataFrame]
+        List of loaded DataFrames.
+    """
+
     dataframes = []
 
     for file_path in file_paths:
@@ -93,41 +126,70 @@ def read_multiple_csv_files(
 
         dataframes.append(df)
 
+    logger.info(
+        f"Successfully loaded "
+        f"{len(dataframes)} CSV files."
+    )
+
     return dataframes
 
-# Read every CSV file inside a folder and return one merged DataFrame.
 
+# Read every CSV file inside one folder.
+def read_csv_folder(
+    folder_path: Path,
+) -> list[pd.DataFrame]:
+    """
+    Read all CSV files inside a folder.
 
-def read_folder(folder_path: Path) -> pd.DataFrame:
+    Parameters
+    ----------
+    folder_path : Path
+        Folder containing CSV files.
 
-    # Ensure the folder exists before searching for CSV files.
+    Returns
+    -------
+    list[pd.DataFrame]
+        List of DataFrames.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the folder does not exist.
+
+    ValueError
+        If no CSV files are found.
+    """
+
+    # Validate folder.
     if not folder_path.exists():
-        logger.error(f"Folder not found: {folder_path}")
-        raise FileNotFoundError(f"Folder not found: {folder_path}")
-                
-    csv_files = sorted(folder_path.glob("*.csv"))
+
+        logger.error(
+            f"Folder not found: {folder_path}"
+        )
+
+        raise FileNotFoundError(
+            f"Folder not found: {folder_path}"
+        )
+
+    csv_files = sorted(
+        folder_path.glob("*.csv")
+    )
 
     if not csv_files:
-        logger.error(f"No CSV files found in: {folder_path}")
-        raise ValueError(f"No CSV files found in: {folder_path}")
 
-    logger.info(f"Found {len(csv_files)} CSV files in '{folder_path.name}'.")
+        logger.error(
+            f"No CSV files found in "
+            f"{folder_path}"
+        )
 
-    dataframes = read_multiple_csv_files(csv_files)
-
-    merged_df = pd.concat(
-        dataframes,
-        ignore_index=True
-    )
+        raise ValueError(
+            f"No CSV files found in "
+            f"{folder_path}"
+        )
 
     logger.info(
-        f"Merged {len(dataframes)} files into one DataFrame "
-        f"with {len(merged_df):,} rows."
+        f"Found {len(csv_files)} CSV files "
+        f"in '{folder_path.name}'."
     )
 
-    return merged_df
-
-
-
-
-    
+    return read_csv_files(csv_files)
