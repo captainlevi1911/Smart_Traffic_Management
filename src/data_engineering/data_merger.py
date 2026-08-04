@@ -1,59 +1,50 @@
-# Purpose:
-# Merge multiple CSV files into a single DataFrame.
+"""
+
+Purpose
+-------
+Merge multiple pandas DataFrames into a single DataFrame
+and save the merged dataset.
+
+This module does NOT read CSV files.
+Reading is handled by ingestion.py.
+"""
 
 from pathlib import Path
+
 import pandas as pd
+
 from src.data_engineering.logger import logger
 
-def merge_csv_files(
-    folder_path: Path,
+
+# Merge multiple DataFrames into one DataFrame.
+def merge_dataframes(
+    dataframes: list[pd.DataFrame],
 ) -> pd.DataFrame:
+    """
+    Merge multiple DataFrames into one.
 
-    if not folder_path.exists():
+    Parameters
+    ----------
+    dataframes : list[pd.DataFrame]
+        List of DataFrames to merge.
 
-        logger.error(f"Folder not found: {folder_path}")
+    Returns
+    -------
+    pd.DataFrame
+        Combined DataFrame.
+    """
 
-        raise FileNotFoundError(
-            f"Folder does not exist: {folder_path}"
-        )
+    if not dataframes:
 
-    csv_files = sorted(
-        folder_path.glob("*.csv")
-    )
-
-    if not csv_files:
-
-        logger.error(
-            f"No CSV files found in: {folder_path}"
-        )
+        logger.error("No DataFrames were provided for merging.")
 
         raise ValueError(
-            f"No CSV files found in: {folder_path}"
+            "Cannot merge an empty list of DataFrames."
         )
 
-    # Store each CSV as a DataFrame.
-    dataframes = []
-
-    for csv_file in csv_files:
-
-        logger.info(
-            f"Reading file: {csv_file.name}"
-        )
-
-        try:
-
-            df = pd.read_csv(csv_file)
-
-        except Exception as e:
-
-            logger.error(
-                f"Failed to read "
-                f"{csv_file.name}: {e}"
-            )
-
-            raise
-
-        dataframes.append(df)
+    logger.info(
+        f"Merging {len(dataframes)} DataFrames."
+    )
 
     merged_df = pd.concat(
         dataframes,
@@ -61,8 +52,40 @@ def merge_csv_files(
     )
 
     logger.info(
-        f"Successfully merged "
-        f"{len(csv_files)} CSV files."
+        f"Merged DataFrame contains "
+        f"{len(merged_df):,} rows."
     )
 
     return merged_df
+
+
+# Save merged DataFrame.
+def save_merged_dataset(
+    dataframe: pd.DataFrame,
+    output_path: Path,
+) -> None:
+    """
+    Save the merged DataFrame as a CSV file.
+
+    Parameters
+    ----------
+    dataframe : pd.DataFrame
+        DataFrame to save.
+
+    output_path : Path
+        Destination CSV path.
+    """
+
+    output_path.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    dataframe.to_csv(
+        output_path,
+        index=False,
+    )
+
+    logger.info(
+        f"Merged dataset saved to: {output_path}"
+    )
