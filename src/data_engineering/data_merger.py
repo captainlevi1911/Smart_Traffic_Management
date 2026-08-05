@@ -2,90 +2,48 @@
 
 Purpose
 -------
-Merge multiple pandas DataFrames into a single DataFrame
-and save the merged dataset.
-
-This module does NOT read CSV files.
-Reading is handled by ingestion.py.
+Write DataFrames incrementally to a single CSV file.
+Designed for large datasets that cannot fit entirely in memory.
 """
 
 from pathlib import Path
-
 import pandas as pd
 
 from src.data_engineering.logger import logger
 
 
-# Merge multiple DataFrames into one DataFrame.
-def merge_dataframes(
-    dataframes: list[pd.DataFrame],
-) -> pd.DataFrame:
+def create_output_file(output_path: Path) -> None:
     """
-    Merge multiple DataFrames into one.
-
-    Parameters
-    ----------
-    dataframes : list[pd.DataFrame]
-        List of DataFrames to merge.
-
-    Returns
-    -------
-    pd.DataFrame
-        Combined DataFrame.
+    Remove an existing output file so every pipeline run
+    starts with a fresh dataset.
     """
 
-    if not dataframes:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
 
-        logger.error("No DataFrames were provided for merging.")
-
-        raise ValueError(
-            "Cannot merge an empty list of DataFrames."
-        )
-
-    logger.info(
-        f"Merging {len(dataframes)} DataFrames."
-    )
-
-    merged_df = pd.concat(
-        dataframes,
-        ignore_index=True,
-    )
-
-    logger.info(
-        f"Merged DataFrame contains "
-        f"{len(merged_df):,} rows."
-    )
-
-    return merged_df
+    if output_path.exists():
+        output_path.unlink()
+        logger.info(f"Removed existing file: {output_path.name}")
 
 
-# Save merged DataFrame.
-def save_merged_dataset(
-    dataframe: pd.DataFrame,
+def append_dataframe_to_csv(
+    df: pd.DataFrame,
     output_path: Path,
 ) -> None:
     """
-    Save the merged DataFrame as a CSV file.
+    Append a DataFrame to the output CSV.
 
-    Parameters
-    ----------
-    dataframe : pd.DataFrame
-        DataFrame to save.
-
-    output_path : Path
-        Destination CSV path.
+    Header is written only once.
     """
 
-    output_path.parent.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
+    write_header = not output_path.exists()
 
-    dataframe.to_csv(
+    df.to_csv(
         output_path,
+        mode="a",
         index=False,
+        header=write_header,
     )
 
     logger.info(
-        f"Merged dataset saved to: {output_path}"
+        f"Appended {len(df):,} rows to '{output_path.name}'."
     )
