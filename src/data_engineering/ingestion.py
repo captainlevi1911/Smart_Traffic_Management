@@ -16,6 +16,7 @@ Merging is handled separately in data_merger.py.
 from pathlib import Path
 import pandas as pd
 from src.data_engineering.logger import logger
+from typing import Iterator
 
 
 # Read a single CSV file.
@@ -193,3 +194,61 @@ def read_csv_folder(
     )
 
     return read_csv_files(csv_files)
+
+
+def read_csv_in_chunks(
+    file_path: Path,
+    chunk_size: int = 25_000,
+) -> Iterator[pd.DataFrame]:
+    """
+    Read a CSV file in chunks.
+
+    Parameters
+    ----------
+    file_path : Path
+        Path to the CSV file.
+
+    chunk_size : int, default=25000
+        Number of rows to load at one time.
+
+    Yields
+    ------
+    pd.DataFrame
+        One chunk of the CSV at a time.
+    """
+
+    try:
+
+        if not file_path.exists():
+            logger.error(f"File not found: {file_path}")
+            raise FileNotFoundError(f"File not found: {file_path}")
+
+        if file_path.suffix.lower() != ".csv":
+            logger.error(f"Unsupported file type: {file_path}")
+            raise ValueError(
+                f"Expected CSV file but got {file_path.suffix}"
+            )
+
+        if file_path.stat().st_size == 0:
+            logger.error(f"CSV file is empty: {file_path}")
+            raise ValueError(f"CSV file is empty: {file_path}")
+
+        logger.info(
+            f"Reading '{file_path.name}' in chunks of {chunk_size:,} rows."
+        )
+
+        for chunk in pd.read_csv(
+            file_path,
+            chunksize=chunk_size,
+            low_memory=False,
+        ):
+
+            yield chunk
+
+    except Exception:
+
+        logger.exception(
+            f"Failed to read CSV in chunks: {file_path}"
+        )
+
+        raise

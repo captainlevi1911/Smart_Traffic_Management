@@ -1,9 +1,12 @@
 """
+data_merger.py
 
 Purpose
 -------
-Write DataFrames incrementally to a single CSV file.
-Designed for large datasets that cannot fit entirely in memory.
+Incrementally write DataFrames to a single CSV file.
+
+Instead of storing hundreds of DataFrames in memory,
+we append each DataFrame directly to the output CSV.
 """
 
 from pathlib import Path
@@ -12,17 +15,25 @@ import pandas as pd
 from src.data_engineering.logger import logger
 
 
-def create_output_file(output_path: Path) -> None:
+def initialize_output_file(output_path: Path) -> None:
     """
-    Remove an existing output file so every pipeline run
-    starts with a fresh dataset.
+    Create a fresh output CSV.
+
+    If the file already exists from a previous run,
+    delete it first.
     """
 
-    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
 
     if output_path.exists():
         output_path.unlink()
-        logger.info(f"Removed existing file: {output_path.name}")
+
+        logger.info(
+            f"Removed existing file: {output_path.name}"
+        )
 
 
 def append_dataframe_to_csv(
@@ -32,7 +43,7 @@ def append_dataframe_to_csv(
     """
     Append a DataFrame to the output CSV.
 
-    Header is written only once.
+    The header is written only once.
     """
 
     write_header = not output_path.exists()
@@ -45,5 +56,6 @@ def append_dataframe_to_csv(
     )
 
     logger.info(
-        f"Appended {len(df):,} rows to '{output_path.name}'."
+        f"Appended {len(df):,} rows to "
+        f"{output_path.name}"
     )
