@@ -3,19 +3,23 @@ run_pipeline.py
 
 Purpose
 -------
-Execute the complete data engineering pipeline.
+Execute the complete Smart Traffic data engineering pipeline.
 
-Pipeline Flow
--------------
+Pipeline
+--------
 1. Find monthly ZIP archives.
 2. Extract ZIP archives.
 3. Read one CSV at a time.
-4. Append directly to traffic_2025.csv.
+4. Append each DataFrame to traffic_2025.csv.
 5. Release memory.
+6. Log detailed information for debugging.
 """
 
 import gc
+import os
 import zipfile
+
+import psutil
 
 from src.data_engineering.logger import logger
 
@@ -35,10 +39,19 @@ from src.data_engineering.data_merger import (
 )
 
 
-def main() -> None:
+def log_memory():
     """
-    Execute the complete data engineering pipeline.
+    Log current RAM usage of the Python process.
     """
+
+    process = psutil.Process(os.getpid())
+
+    ram = process.memory_info().rss / (1024 ** 2)
+
+    logger.info(f"Current Process RAM Usage : {ram:.2f} MB")
+
+
+def main():
 
     logger.info("=" * 70)
     logger.info("Starting Smart Traffic Data Engineering Pipeline")
@@ -46,9 +59,9 @@ def main() -> None:
 
     try:
 
-        # ---------------------------------------------------------
-        # Step 1 : Find all ZIP files
-        # ---------------------------------------------------------
+        # ==========================================================
+        # Step 1 : Find ZIP files
+        # ==========================================================
         zip_files = sorted(
             RAW_DATA_DIR.glob("*.zip")
         )
@@ -65,26 +78,33 @@ def main() -> None:
             f"Found {len(zip_files)} monthly ZIP files."
         )
 
-        # ---------------------------------------------------------
-        # Step 2 : Create fresh output CSV
-        # ---------------------------------------------------------
+        # ==========================================================
+        # Step 2 : Create Output File
+        # ==========================================================
         output_path = (
             PROCESSED_DATA_DIR /
             "traffic_2025.csv"
         )
 
-        initialize_output_file(
-            output_path
-        )
+        initialize_output_file(output_path)
 
-        # ---------------------------------------------------------
-        # Step 3 : Process every ZIP
-        # ---------------------------------------------------------
-        for zip_file in zip_files:
+        # ==========================================================
+        # Step 3 : Process every ZIP archive
+        # ==========================================================
+        for month_index, zip_file in enumerate(
+            zip_files,
+            start=1,
+        ):
 
+            logger.info("")
+            logger.info("=" * 70)
             logger.info(
-                f"Processing {zip_file.name}"
+                f"Processing Month {month_index}/{len(zip_files)}"
             )
+            logger.info(
+                f"Archive : {zip_file.name}"
+            )
+            logger.info("=" * 70)
 
             extract_path = (
                 TEMP_DATA_DIR /
@@ -94,6 +114,10 @@ def main() -> None:
             extract_path.mkdir(
                 parents=True,
                 exist_ok=True,
+            )
+
+            logger.info(
+                f"Extracting {zip_file.name}"
             )
 
             with zipfile.ZipFile(
@@ -106,7 +130,7 @@ def main() -> None:
                 )
 
             logger.info(
-                f"Extracted {zip_file.name}"
+                "Extraction completed."
             )
 
             csv_files = sorted(
@@ -117,32 +141,75 @@ def main() -> None:
                 f"Found {len(csv_files)} CSV files."
             )
 
-            # -------------------------------------------------
+            # ======================================================
             # Step 4 : Process every CSV
-            # -------------------------------------------------
-            for csv_file in csv_files:
+            # ======================================================
+            for csv_index, csv_file in enumerate(
+                csv_files,
+                start=1,
+            ):
+
+                logger.info("")
+                logger.info("-" * 60)
+                logger.info(
+                    f"CSV {csv_index}/{len(csv_files)}"
+                )
+                logger.info(
+                    f"Current File : {csv_file.name}"
+                )
+
+                log_memory()
+
+                # ----------------------------------------------
+                # Read CSV
+                # ----------------------------------------------
+                df = read_csv_file(csv_file)
 
                 logger.info(
-                    f"Reading {csv_file.name}"
+                    f"Shape : {df.shape}"
                 )
 
-                df = read_csv_file(
-                    csv_file
+                dataframe_memory = (
+                    df.memory_usage(deep=True)
+                    .sum()
+                    / (1024 ** 2)
                 )
 
+                logger.info(
+                    f"DataFrame Memory : "
+                    f"{dataframe_memory:.2f} MB"
+                )
+
+                log_memory()
+
+                # ----------------------------------------------
+                # Append to output CSV
+                # ----------------------------------------------
                 append_dataframe_to_csv(
                     df,
                     output_path,
                 )
 
-                # Free RAM
+                logger.info(
+                    "Successfully appended."
+                )
+
+                # ----------------------------------------------
+                # Free Memory
+                # ----------------------------------------------
                 del df
+
                 gc.collect()
 
+                logger.info(
+                    "Released DataFrame memory."
+                )
+
+                log_memory()
+
+        logger.info("")
         logger.info("=" * 70)
-        logger.info(
-            "Pipeline completed successfully."
-        )
+        logger.info("Pipeline completed successfully.")
         logger.info("=" * 70)
 
     except Exception:
