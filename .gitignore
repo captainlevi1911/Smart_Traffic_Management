@@ -5,7 +5,7 @@ venv/
 # Python
 __pycache__/
 *.py[cod]
-*.pyc
+*$py.class
 
 # Logs
 logs/
@@ -21,3 +21,4 @@ data/monthly/
 
 # VS Code
 .vscode/
+
