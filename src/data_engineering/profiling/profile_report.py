@@ -3,24 +3,34 @@ profile_report.py
 
 Purpose
 -------
-Stores profiling results for the dataset.
+Defines the ProfileReport class, which stores all statistics
+generated during dataset profiling.
 
-This class does NOT perform any calculations.
-It only stores statistics collected by profiler.py.
+Responsibilities
+----------------
+- Store profiling results.
+- Provide a structured object for profiler.py.
+- Contain NO business logic.
+- Contain NO pandas code.
+- Contain NO file reading.
 """
 
 from dataclasses import dataclass, field
+from typing import Dict, List, Optional
 
 
 @dataclass
 class ProfileReport:
     """
-    Stores dataset profiling statistics.
+    Stores all profiling statistics for a dataset.
+
+    This class acts only as a data container.
+    It does not calculate any statistics.
     """
 
-    # =====================================================
+    # ==========================================================
     # Dataset Information
-    # =====================================================
+    # ==========================================================
 
     total_rows: int = 0
 
@@ -28,56 +38,76 @@ class ProfileReport:
 
     total_memory_mb: float = 0.0
 
-    # =====================================================
+    # ==========================================================
     # Column Information
-    # =====================================================
+    # ==========================================================
 
-    column_names: list[str] = field(
+    column_names: List[str] = field(
         default_factory=list
     )
 
-    data_types: dict[str, str] = field(
+    data_types: Dict[str, str] = field(
         default_factory=dict
     )
 
-    missing_values: dict[str, int] = field(
+    # ==========================================================
+    # Data Quality
+    # ==========================================================
+
+    missing_values: Dict[str, int] = field(
         default_factory=dict
     )
 
-    # =====================================================
-    # Display Report
-    # =====================================================
+    duplicate_rows: int = 0
 
-    def summary(self) -> None:
-        """
-        Print dataset profile summary.
-        """
+    # ==========================================================
+    # Column Statistics
+    # ==========================================================
 
-        print("\n" + "=" * 60)
-        print("DATA PROFILE REPORT")
-        print("=" * 60)
+    unique_values: Dict[str, int] = field(
+        default_factory=dict
+    )
 
-        print(f"Rows           : {self.total_rows:,}")
+    minimum_values: Dict[str, float] = field(
+        default_factory=dict
+    )
 
-        print(f"Columns        : {self.total_columns}")
+    maximum_values: Dict[str, float] = field(
+        default_factory=dict
+    )
 
-        print(
-            f"Memory (MB)    : "
-            f"{self.total_memory_mb:.2f}"
-        )
+    mean_values: Dict[str, float] = field(
+        default_factory=dict
+    )
 
-        print("\nColumns")
+    median_values: Dict[str, float] = field(
+        default_factory=dict
+    )
 
-        for column in self.column_names:
+    std_values: Dict[str, float] = field(
+        default_factory=dict
+    )
 
-            dtype = self.data_types.get(column)
+    # ==========================================================
+    # Time Information
+    # ==========================================================
 
-            missing = self.missing_values.get(column)
+    start_date: Optional[str] = None
 
-            print(
-                f"{column:<35}"
-                f"{dtype:<12}"
-                f"Missing : {missing}"
-            )
+    end_date: Optional[str] = None
 
-        print("=" * 60)
+    start_time: Optional[str] = None
+
+    end_time: Optional[str] = None
+
+    # ==========================================================
+    # Metadata
+    # ==========================================================
+
+    file_name: str = ""
+
+    file_size_mb: float = 0.0
+
+    profiling_time_seconds: float = 0.0
+
+    chunk_size: int = 0
