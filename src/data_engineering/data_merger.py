@@ -15,7 +15,7 @@ import pandas as pd
 from src.data_engineering.logger import logger
 
 
-def initialize_output_file(output_path: Path) -> None:
+def initialize_output_file(output_path: Path) -> None:  
     """
     Create a fresh output CSV.
 
